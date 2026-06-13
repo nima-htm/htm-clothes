@@ -1,0 +1,5 @@
+{
+  "db_connection_string": "sqlite:///nima_clothes.db",
+  "app_language": "fa",
+  "theme": "light"
+}
