@@ -1,5 +1,5 @@
 """
-Product Management Widget - Exact Layout from Image
+Product Management Widget - با قابلیت جستجوی real-time روی نام و کد کالا
 """
 
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
@@ -42,7 +42,11 @@ class ProductWidget(QWidget):
             color: #2d1b1b;
             font-size: 16px;
             min-height: 24px;
-            
+        }
+
+        QLineEdit#search_active {
+            background-color: #FFF8DC;
+            border: 1px solid #DAA520;
         }
         
         QLineEdit:disabled {
@@ -138,6 +142,9 @@ class ProductWidget(QWidget):
         self.db_manager = db_manager
         self.product_service = ProductService(session)
 
+        # Flag to prevent search triggering during programmatic fill (e.g. row selection)
+        self._suppress_search = False
+
         self.setStyleSheet(self.WIDGET_STYLESHEET)
         self._init_ui()
         self._load_products()
@@ -179,18 +186,23 @@ class ProductWidget(QWidget):
         row1 = QHBoxLayout()
         row1.setSpacing(12)
 
-        # کد کالا (خودکار)
+        # کد کالا — حالا قابل ویرایش با جستجوی real-time
         self.numeric_code_edit = QLineEdit()
         self.numeric_code_edit.setPlaceholderText("کد کالا")
-        self.numeric_code_edit.setEnabled(False)
         self.numeric_code_edit.setFixedWidth(90)
+        # جستجوی real-time روی ستون کد (ستون 1)
+        self.numeric_code_edit.textChanged.connect(
+            lambda text: self._on_search_field_changed(text, col=1)
+        )
         row1.addWidget(self.numeric_code_edit)
 
-        # نام کالا
+        # نام کالا — با جستجوی real-time
         self.name_edit = QLineEdit()
-        # self.name_edit.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-
         self.name_edit.setPlaceholderText("نام کامل کالا")
+        # جستجوی real-time روی ستون نام (ستون 2)
+        self.name_edit.textChanged.connect(
+            lambda text: self._on_search_field_changed(text, col=2)
+        )
         row1.addWidget(self.name_edit, 3)
 
         # دسته بندی
@@ -235,7 +247,6 @@ class ProductWidget(QWidget):
         row2.addWidget(price_label)
         row2.addWidget(self.price_edit)
 
-        # فاصله برای هل دادن دکمه‌ها به سمت چپ
         row2.addStretch()
 
         # دکمه‌ها
@@ -298,6 +309,42 @@ class ProductWidget(QWidget):
         table_group.setLayout(table_layout)
         layout.addWidget(table_group)
 
+    # ================================
+    # ✅ جستجوی real-time
+    # ================================
+    def _on_search_field_changed(self, text: str, col: int):
+        """
+        وقتی متن فیلد نام یا کد تغییر می‌کند، ردیف‌های جدول را فیلتر می‌کند.
+        col=1 → جستجو روی ستون کد
+        col=2 → جستجو روی ستون نام
+        اگر suppress_search فعال باشد (مثلاً هنگام انتخاب ردیف)، جستجو انجام نمی‌شود.
+        """
+        if self._suppress_search:
+            return
+
+        # ترکیب هر دو فیلتر همزمان: هم کد و هم نام را در نظر می‌گیریم
+        name_query = self.name_edit.text().strip()
+        code_query = self.numeric_code_edit.text().strip()
+
+        self._filter_table(name_query=name_query, code_query=code_query)
+
+    def _filter_table(self, name_query: str = "", code_query: str = ""):
+        """
+        نمایش یا پنهان کردن ردیف‌های جدول بر اساس فیلترهای نام و کد.
+        هر دو فیلتر با AND ترکیب می‌شوند.
+        """
+        name_lower = name_query.lower()
+        code_lower = code_query.lower()
+
+        for row in range(self.products_table.rowCount()):
+            row_name = self._get_cell_text(row, 2).lower()
+            row_code = self._get_cell_text(row, 1).lower()
+
+            name_match = name_lower in row_name if name_lower else True
+            code_match = code_lower in row_code if code_lower else True
+
+            self.products_table.setRowHidden(row, not (name_match and code_match))
+
     def _on_category_changed(self, index):
         """تغییر placeholder موجودی بر اساس دسته‌بندی"""
         category = self.category_combo.currentData()
@@ -327,10 +374,14 @@ class ProductWidget(QWidget):
 
             for col, text in enumerate(items):
                 display_text = self._to_persian_digits(text)
-
                 item = QTableWidgetItem(display_text)
-
                 self.products_table.setItem(row, col, item)
+
+        # بعد از بارگذاری مجدد، فیلتر فعلی را اعمال کن
+        self._filter_table(
+            name_query=self.name_edit.text().strip(),
+            code_query=self.numeric_code_edit.text().strip()
+        )
 
     def _save_product(self):
         try:
@@ -370,8 +421,6 @@ class ProductWidget(QWidget):
             return
 
         row = selected_ranges[0].topRow()
-
-        # Get product ID from table
         item = self.products_table.item(row, 0)
         pid = int(self._to_english_digits(item.text())) if item else 0
 
@@ -414,8 +463,6 @@ class ProductWidget(QWidget):
 
         if reply == QMessageBox.Yes:
             row = selected_ranges[0].topRow()
-
-            # Get product ID from table
             item = self.products_table.item(row, 0)
             pid = int(self._to_english_digits(item.text())) if item else 0
 
@@ -438,24 +485,24 @@ class ProductWidget(QWidget):
         self.update_btn.setEnabled(True)
         self.delete_btn.setEnabled(True)
 
+        # پر کردن فرم بدون فعال شدن جستجو
+        self._suppress_search = True
 
         item = self.products_table.item(row, 1)
         numeric_code = item.text() if item else ""
-        
+
         item = self.products_table.item(row, 2)
         name_text = item.text() if item else ""
-        
+
         item = self.products_table.item(row, 5)
         stock_text = item.text() if item else "0"
-        
+
         item = self.products_table.item(row, 6)
         price_text = item.text() if item else "0"
-        
+
         self.numeric_code_edit.setText(numeric_code)
         self.name_edit.setText(name_text)
-        self.stock_edit.setText(
-            self._to_english_digits(stock_text)
-        )
+        self.stock_edit.setText(self._to_english_digits(stock_text))
         self.price_edit.setText(
             self._to_english_digits(price_text.replace(",", ""))
         )
@@ -476,7 +523,11 @@ class ProductWidget(QWidget):
         else:
             self.purchase_radio.setChecked(True)
 
+        self._suppress_search = False
+
     def _clear_form(self):
+        self._suppress_search = True
+
         self.numeric_code_edit.clear()
         self.name_edit.clear()
         self.stock_edit.setText("0")
@@ -486,3 +537,8 @@ class ProductWidget(QWidget):
         self.update_btn.setEnabled(False)
         self.delete_btn.setEnabled(False)
         self.products_table.clearSelection()
+
+        self._suppress_search = False
+
+        # بازنمایی همه ردیف‌ها بعد از پاک کردن فرم
+        self._filter_table()
