@@ -1,7 +1,7 @@
 """
 Sales Invoice Service - Direct Stock Management
 """
-
+import jdatetime
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from models.sales import SalesInvoice, SalesInvoiceItem
@@ -16,24 +16,35 @@ class SalesInvoiceService:
         self.product_service = ProductService(session)
 
     def _generate_invoice_number(self) -> str:
-        today = datetime.now().strftime("%Y%m%d")
+
+        today = jdatetime.date.today()
+        current_year_str = str(today.year)
+
+        # جستجوی آخرین فاکتور در سال شمسی جاری
         last_invoice = (
             self.session.query(SalesInvoice)
-            .filter(SalesInvoice.invoice_number.like(f"S-{today}-%"))
-            .order_by(SalesInvoice.id.desc())
+            .filter(SalesInvoice.invoice_number.like(f"{current_year_str}%"))
+            .order_by(SalesInvoice.invoice_number.desc())
             .first()
         )
 
         if last_invoice:
             try:
-                last_num = int(last_invoice.invoice_number.split("-")[-1])
+
+                last_num = int(last_invoice.invoice_number[-4:])
                 new_num = last_num + 1
-            except ValueError:
+            except (ValueError, IndexError):
                 new_num = 1
         else:
             new_num = 1
 
-        return f"S-{today}-{new_num:04d}"
+        # جلوگیری از سرریز شدن از ۹۹۹۹
+        if new_num > 9999:
+            raise ValueError(
+                f"ظرفیت شماره‌گذاری در سال {current_year_str} به پایان رسیده است."
+            )
+
+        return f"{current_year_str}{new_num:04d}"
 
     def create_invoice(self, customer_id: int, items: list[dict],
                        discount: float = 0.0, notes: str = None) -> SalesInvoice:
