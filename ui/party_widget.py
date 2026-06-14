@@ -15,33 +15,97 @@ from services.party_service import PartyService
 
 class PartyWidget(QWidget):
     WIDGET_STYLESHEET = """
-        QLabel { color: #1e293b; font-size: 13px; background-color: transparent; }
-        QLabel#title { font-size: 20px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
-        
+        QWidget {
+            background-color: #A0522D;
+        }
+
+        QLabel#title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #592302;
+            background: transparent;
+            padding: 10px;
+        }
+
+        QLabel {
+            color: #592302;
+            font-size: 14px;
+            font-weight: bold;
+            background: transparent;
+        }
+
+        QLineEdit, QComboBox {
+            background-color: #FFE4E1;
+            border: 1px solid #CD853F;
+            border-radius: 2px;
+            padding: 4px 8px;
+            color: #2d1b1b;
+            font-size: 16px;
+            min-height: 24px;
+        }
+
+        QLineEdit:disabled {
+            background-color: #E8D5D0;
+            color: #666;
+        }
+
+        QComboBox::drop-down {
+            border: none;
+            width: 20px;
+        }
+
+        QComboBox QAbstractItemView {
+            background-color: #FFE4E1;
+            color: #2d1b1b;
+            selection-background-color: #D2691E;
+        }
+
+        QPushButton {
+            color: white;
+            border: 1px solid #5d4037;
+            border-radius: 3px;
+            padding: 5px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            min-width: 80px;
+        }
+
+        QPushButton#save_btn   { background-color: #6B8E6B; }
+        QPushButton#update_btn { background-color: #6B8E6B; }
+        QPushButton#delete_btn { background-color: #CD5C5C; }
+        QPushButton#clear_btn  { background-color: #8B4513; }
+
+        QPushButton:hover    { border: 1px solid white; }
+        QPushButton:disabled { background-color: #8B7355; color: #ccc; }
+
         QGroupBox {
-            font-weight: bold; color: #334155; border: 1px solid #e2e8f0;
-            border-radius: 8px; margin-top: 12px; padding: 15px 10px 10px 10px;
-            background-color: #ffffff;
+            border: 1px solid #CD853F;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            background-color: transparent;
         }
-        QGroupBox::title { subcontrol-origin: margin; right: 15px; padding: 0 8px; color: #1e293b; }
-        
-        QPushButton#save_btn { background-color: #10b981; }
-        QPushButton#save_btn:hover { background-color: #059669; }
-        QPushButton#update_btn { background-color: #3b82f6; }
-        QPushButton#update_btn:hover { background-color: #2563eb; }
-        QPushButton#delete_btn { background-color: #ef4444; }
-        QPushButton#delete_btn:hover { background-color: #dc2626; }
-        QPushButton#clear_btn { background-color: #64748b; }
-        QPushButton#clear_btn:hover { background-color: #475569; }
-        
+
+        QGroupBox::title {
+            subcontrol-origin: margin;
+            subcontrol-position: top right;
+            right: 15px;
+            padding: 0 5px;
+        }
+
         QTableWidget {
-            border: 1px solid #e2e8f0; border-radius: 6px; gridline-color: #f1f5f9;
-            selection-background-color: #dbeafe; selection-color: #1e293b;
-            background-color: #ffffff; color: #334155;
+            background-color: white;
+            border: 1px solid #CD853F;
+            gridline-color: #DEB887;
+            font-size: 15px;
         }
+
         QHeaderView::section {
-            background-color: #f8fafc; color: #475569; padding: 10px;
-            font-weight: bold; border: none; border-bottom: 2px solid #e2e8f0;
+            background-color: #D2B48C;
+            color: #2d1b1b;
+            padding: 6px;
+            border: 1px solid #8B4513;
+            font-weight: bold;
         }
     """
 
@@ -51,7 +115,7 @@ class PartyWidget(QWidget):
         self.session = session
         self.db_manager = db_manager
         self.party_service = PartyService(session)
-
+        self._suppress_search = False
         self.setStyleSheet(self.WIDGET_STYLESHEET)
 
         self._init_ui()
@@ -67,72 +131,94 @@ class PartyWidget(QWidget):
 
     def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(25, 20, 25, 20)
-        layout.setSpacing(12)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(10)
 
         title = QLabel("مدیریت طرف حساب‌ها")
         title.setObjectName("title")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
 
         form_group = QGroupBox("اطلاعات طرف حساب")
-        form_layout = QFormLayout()
-        form_layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        form_layout = QVBoxLayout()
+        form_layout.setContentsMargins(15, 10, 15, 15)
         form_layout.setSpacing(12)
-        form_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
+        # ================================
+        # یک خط: نام | تلفن | نوع | آدرس
+        # ================================
+        row1 = QHBoxLayout()
+        row1.setSpacing(12)
+
+        name_label = QLabel("نام:")
         self.name_edit = QLineEdit()
         self.name_edit.setPlaceholderText("نام شخص یا شرکت")
-        form_layout.addRow("نام:", self.name_edit)
+        self.name_edit.textChanged.connect(self._on_name_search)
+        row1.addWidget(name_label)
+        row1.addWidget(self.name_edit, 3)
 
+        phone_label = QLabel("تلفن:")
         self.phone_edit = QLineEdit()
-        self.phone_edit.setPlaceholderText("شماره تماس (اختیاری)")
-        form_layout.addRow("تلفن:", self.phone_edit)
+        self.phone_edit.setPlaceholderText("شماره تماس")
+        row1.addWidget(phone_label)
+        row1.addWidget(self.phone_edit, 2)
 
+        type_label = QLabel("نوع:")
         self.type_combo = QComboBox()
         self.type_combo.addItem("مشتری", PartyType.CUSTOMER)
         self.type_combo.addItem("فروشنده", PartyType.SUPPLIER)
         self.type_combo.addItem("هر دو", PartyType.BOTH)
-        form_layout.addRow("نوع:", self.type_combo)
+        self.type_combo.setFixedWidth(110)
+        row1.addWidget(type_label)
+        row1.addWidget(self.type_combo)
 
+        address_label = QLabel("آدرس:")
         self.address_edit = QLineEdit()
-        self.address_edit.setPlaceholderText("آدرس کامل (اختیاری)")
-        form_layout.addRow("آدرس:", self.address_edit)
+        self.address_edit.setPlaceholderText("آدرس کامل")
+        row1.addWidget(address_label)
+        row1.addWidget(self.address_edit, 4)
 
-        form_group.setLayout(form_layout)
-        layout.addWidget(form_group)
+        form_layout.addLayout(row1)
 
+
+        # دکمه‌ها
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(10)
 
         self.save_btn = QPushButton("ذخیره")
         self.save_btn.setObjectName("save_btn")
-        self.save_btn.setMinimumHeight(42)
+        self.save_btn.setMinimumHeight(36)
         self.save_btn.clicked.connect(self._save_party)
 
         self.update_btn = QPushButton("ویرایش")
         self.update_btn.setObjectName("update_btn")
-        self.update_btn.setMinimumHeight(42)
+        self.update_btn.setMinimumHeight(36)
         self.update_btn.setEnabled(False)
         self.update_btn.clicked.connect(self._update_party)
 
         self.delete_btn = QPushButton("حذف")
         self.delete_btn.setObjectName("delete_btn")
-        self.delete_btn.setMinimumHeight(42)
+        self.delete_btn.setMinimumHeight(36)
         self.delete_btn.setEnabled(False)
         self.delete_btn.clicked.connect(self._delete_party)
 
         self.clear_btn = QPushButton("پاک کردن فرم")
         self.clear_btn.setObjectName("clear_btn")
-        self.clear_btn.setMinimumHeight(42)
+        self.clear_btn.setMinimumHeight(36)
         self.clear_btn.clicked.connect(self._clear_form)
 
+
+        btn_layout.addStretch()
         for btn in [self.save_btn, self.update_btn, self.delete_btn, self.clear_btn]:
             btn_layout.addWidget(btn)
-        layout.addLayout(btn_layout)
+        form_layout.addLayout(btn_layout)
+        form_group.setLayout(form_layout)
+        layout.addWidget(form_group)
 
+        # جدول
         table_group = QGroupBox("لیست طرف حساب‌ها")
         table_layout = QVBoxLayout()
-        table_layout.setContentsMargins(8, 8, 8, 8)
+        table_layout.setContentsMargins(0, 0, 0, 0)
 
         self.parties_table = QTableWidget()
         headers = ["شناسه", "نام", "تلفن", "نوع", "آدرس"]
@@ -145,6 +231,7 @@ class PartyWidget(QWidget):
         self.parties_table.verticalHeader().setVisible(False)
         self.parties_table.setAlternatingRowColors(True)
         self.parties_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.parties_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.parties_table.itemSelectionChanged.connect(self._on_table_selection)
 
         table_layout.addWidget(self.parties_table)
@@ -251,6 +338,7 @@ class PartyWidget(QWidget):
                 QMessageBox.critical(self, "خطا", f"خطا در حذف: {str(e)}")
 
     def _on_table_selection(self):
+        self._suppress_search = True
         try:
             selected_ranges = self.parties_table.selectedRanges()
             if not selected_ranges:
@@ -277,7 +365,6 @@ class PartyWidget(QWidget):
             self.phone_edit.setText(_safe_text(row, 2))
             self.address_edit.setText(_safe_text(row, 4))
 
-            # تنظیم combobox بر اساس مقدار ذخیره شده
             type_value = _safe_text(row, 3)
             for i in range(self.type_combo.count()):
                 if self.type_combo.itemData(i).value == type_value:
@@ -288,11 +375,32 @@ class PartyWidget(QWidget):
             import traceback
             print(f"[ERROR] Party table selection failed: {e}")
             traceback.print_exc()
+        finally:
+            self._suppress_search = False  # همیشه اجرا می‌شه
 
     def _clear_form(self):
+        self._suppress_search = True
         self.name_edit.clear()
         self.phone_edit.clear()
         self.address_edit.clear()
         self.type_combo.setCurrentIndex(0)
+        self._suppress_search = False
         self.update_btn.setEnabled(False)
         self.delete_btn.setEnabled(False)
+        self._filter_table()
+
+    def _on_name_search(self, text: str):
+        if self._suppress_search:
+            return
+        query = text.strip().lower()
+        for row in range(self.parties_table.rowCount()):
+            item = self.parties_table.item(row, 1)  # ستون نام
+            match = query in (item.text().lower() if item else "")
+            self.parties_table.setRowHidden(row, not match)
+
+    def _filter_table(self, name_query: str = ""):
+        query = name_query.strip().lower()
+        for row in range(self.parties_table.rowCount()):
+            item = self.parties_table.item(row, 1)
+            match = query in (item.text().lower() if item else "") if query else True
+            self.parties_table.setRowHidden(row, not match)
