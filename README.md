@@ -21,40 +21,7 @@ SQLAlchemy (ORM)
 PostgreSQL/SQLite (Database)
 ```
 
-## ساختار پروژه
-
-```
-nima_clothes/
-├── main.py                 # نقطه ورود برنامه
-├── core/                   # هسته اصلی
-│   └── database.py         # مدیریت دیتابیس
-├── models/                 # مدل‌های داده
-│   ├── product.py          # مدل کالا
-│   ├── party.py            # مدل طرف حساب
-│   ├── sales.py            # مدل فاکتور فروش
-│   ├── purchase.py         # مدل فاکتور خرید
-│   └── inventory.py        # مدل گردش کالا
-├── services/               # لایه منطق کسب‌وکار
-│   ├── product_service.py
-│   ├── party_service.py
-│   ├── sales_service.py
-│   └── purchase_service.py
-├── ui/                     # رابط کاربری
-│   ├── main_window.py
-│   ├── product_widget.py
-│   ├── party_widget.py
-│   ├── sales_invoice_widget.py
-│   ├── purchase_invoice_widget.py
-│   └── reports_widget.py
-└── requirements.txt        # وابستگی‌ها
-```
-
 ## نصب و راه‌اندازی
-
-### پیش‌نیازها
-
-- Python 3.8+
-- PostgreSQL (اختیاری - پیش‌فرض SQLite است)
 
 ### نصب وابستگی‌ها
 
@@ -65,7 +32,7 @@ pip install -r requirements.txt
 ### اجرای برنامه
 
 ```bash
-cd nima_clothes
+cd htm_clothes
 python main.py
 ```
 
@@ -146,19 +113,6 @@ db = DatabaseManager("mysql+pymysql://user:password@localhost/nima_clothes")
 
 ## تکنولوژی‌ها
 
-- **UI**: PySide6 (Qt for Python)
-- **ORM**: SQLAlchemy 2.x
-- **Database**: PostgreSQL/SQLite/MySQL
-- **Print**: ReportLab (برای تولید PDF)
-
-## توسعه آینده
-
-- [ ] سیستم چاپ فاکتور با ReportLab
-- [ ] پشتیبانی از بارکدخوان
-- [ ] گزارش‌های پیشرفته‌تر
-- [ ] پشتیبان‌گیری خودکار
-- [ ] چند زبانه (فارسی/انگلیسی)
-
-## مجوز
-
-این پروژه برای استفاده شخصی و تجاری کوچک طراحی شده است.
+- PySide6 (Qt)
+- SQLAlchemy 2
+- ReportLab 
