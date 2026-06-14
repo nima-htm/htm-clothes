@@ -241,8 +241,9 @@ class ProductWidget(QWidget):
         row2.addWidget(self.stock_edit)
 
         # قیمت
-        price_label = QLabel("قیمت:")
+        price_label = QLabel("قیمت(ریال):")
         self.price_edit = QLineEdit("0")
+        self.price_edit.textChanged.connect(self._format_price_input)
         self.price_edit.setFixedWidth(130)
         row2.addWidget(price_label)
         row2.addWidget(self.price_edit)
@@ -542,3 +543,28 @@ class ProductWidget(QWidget):
 
         # بازنمایی همه ردیف‌ها بعد از پاک کردن فرم
         self._filter_table()
+
+    def _format_price_input(self, text: str):
+        """افزودن جداکننده هزار هنگام تایپ قیمت"""
+        # جلوگیری از loop بازگشتی
+        self.price_edit.blockSignals(True)
+
+        # حذف همه کاماها و تبدیل به انگلیسی
+        clean = self._to_english_digits(text).replace(",", "")
+
+        if clean and clean != "0":
+            try:
+                formatted = f"{int(clean):,}"
+            except ValueError:
+                formatted = clean
+        else:
+            formatted = clean
+
+        cursor_pos = self.price_edit.cursorPosition()
+        self.price_edit.setText(formatted)
+
+        # تنظیم مجدد موقعیت cursor (تعداد کاماهای اضافه‌شده را جبران می‌کند)
+        extra_commas = formatted.count(",") - text.count(",")
+        self.price_edit.setCursorPosition(cursor_pos + extra_commas)
+
+        self.price_edit.blockSignals(False)
