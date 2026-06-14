@@ -356,8 +356,8 @@ class MainWindow(QMainWindow):
 
     def open_invoice_for_edit(self, invoice_id: int, invoice_type: str):
         if invoice_type == 'sales':
-            self.sidebar.setCurrentRow(0)
+            self.sidebar.setCurrentRow(1)
             self.sales_widget.load_existing_invoice(invoice_id)
         elif invoice_type == 'purchase':
-            self.sidebar.setCurrentRow(1)
+            self.sidebar.setCurrentRow(2)
             self.purchase_widget.load_existing_invoice(invoice_id)
