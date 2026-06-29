@@ -1,28 +1,38 @@
 """
 Purchase Invoice Widget - همگام با تمام تغییرات فاکتور فروش
 """
-import os
-from qjalalicalendarwidget import QJalaliCalendarWidget
-import jdatetime
 
-from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
-                                QLabel, QLineEdit, QPushButton,
-                                QTableWidget, QTableWidgetItem, QMessageBox,
-                                QGroupBox, QHeaderView, QTextEdit,
-                                QAbstractItemView)
+import os
+
+import jdatetime
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
+from qjalalicalendarwidget import QJalaliCalendarWidget
 from sqlalchemy.orm import Session
 
 from models.party import PartyType
-from services.purchase_service import PurchaseInvoiceService
-from services.product_service import ProductService
 from services.party_service import PartyService
 from services.printer_service import PrintService
+from services.product_service import ProductService
+from services.purchase_service import PurchaseInvoiceService
 from ui.sales_invoice_widget import SearchDialog
 
 
 class PurchaseInvoiceWidget(QWidget):
-
     WIDGET_STYLESHEET = """
         QWidget {
             background-color: #A0522D;
@@ -154,12 +164,12 @@ class PurchaseInvoiceWidget(QWidget):
         }
     """
 
-    COL_CODE  = 0
-    COL_NAME  = 1
-    COL_QTY   = 2
+    COL_CODE = 0
+    COL_NAME = 1
+    COL_QTY = 2
     COL_PRICE = 3
     COL_TOTAL = 4
-    COL_DEL   = 5
+    COL_DEL = 5
 
     @staticmethod
     def _to_persian(text) -> str:
@@ -167,11 +177,15 @@ class PurchaseInvoiceWidget(QWidget):
 
     @staticmethod
     def _to_english(text: str) -> str:
-        return text.translate(str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789"))
+        return text.translate(
+            str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+        )
 
     @staticmethod
     def _clean(text: str) -> float:
-        return float(PurchaseInvoiceWidget._to_english(text).replace(",", "").strip() or 0)
+        return float(
+            PurchaseInvoiceWidget._to_english(text).replace(",", "").strip() or 0
+        )
 
     def _format_jdate(self, jdate: jdatetime.date) -> str:
         persian = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
@@ -271,12 +285,12 @@ class PurchaseInvoiceWidget(QWidget):
         )
 
         hdr = self.items_table.horizontalHeader()
-        hdr.setSectionResizeMode(self.COL_CODE,  QHeaderView.ResizeToContents)
-        hdr.setSectionResizeMode(self.COL_NAME,  QHeaderView.Stretch)
-        hdr.setSectionResizeMode(self.COL_QTY,   QHeaderView.ResizeToContents)
+        hdr.setSectionResizeMode(self.COL_CODE, QHeaderView.ResizeToContents)
+        hdr.setSectionResizeMode(self.COL_NAME, QHeaderView.Stretch)
+        hdr.setSectionResizeMode(self.COL_QTY, QHeaderView.ResizeToContents)
         hdr.setSectionResizeMode(self.COL_PRICE, QHeaderView.ResizeToContents)
         hdr.setSectionResizeMode(self.COL_TOTAL, QHeaderView.ResizeToContents)
-        hdr.setSectionResizeMode(self.COL_DEL,   QHeaderView.ResizeToContents)
+        hdr.setSectionResizeMode(self.COL_DEL, QHeaderView.ResizeToContents)
 
         self.items_table.verticalHeader().setVisible(False)
         self.items_table.setAlternatingRowColors(True)
@@ -359,7 +373,7 @@ class PurchaseInvoiceWidget(QWidget):
             selected_bg="#8B4513",
             selected_fg="#ffffff",
             today_bg="#FFE4E1",
-            friday_fg="#CD5C5C"
+            friday_fg="#CD5C5C",
         )
         self._calendar.setStyleSheet("""
             QComboBox {
@@ -405,7 +419,7 @@ class PurchaseInvoiceWidget(QWidget):
             QMessageBox.warning(self, "خطا", "هیچ تامین‌کننده‌ای ثبت نشده است")
             return
 
-        dlg = SearchDialog(self, suppliers, search_fields=('name', 'phone'))
+        dlg = SearchDialog(self, suppliers, search_fields=("name", "phone"))
         dlg.item_selected.connect(self._on_supplier_selected)
         dlg.exec()
 
@@ -422,7 +436,7 @@ class PurchaseInvoiceWidget(QWidget):
             QMessageBox.warning(self, "خطا", "هیچ کالایی ثبت نشده است")
             return
 
-        dlg = SearchDialog(self, products, search_fields=('name', 'numeric_code'))
+        dlg = SearchDialog(self, products, search_fields=("name", "numeric_code"))
         prefill = self.product_search_edit.text().strip()
         if prefill:
             dlg.search_edit.setText(prefill)
@@ -431,18 +445,20 @@ class PurchaseInvoiceWidget(QWidget):
 
     def _on_product_selected(self, product):
         """افزودن کالا با تعداد پیش‌فرض ۵ و قیمت خرید پیش‌فرض"""
-        default_qty   = 5
-        default_price = getattr(product, 'default_price', 0) or 0
+        default_qty = 5
+        default_price = getattr(product, "default_price", 0) or 0
 
-        self.invoice_items.append({
-            'product_id':   product.id,
-            'product_code': product.numeric_code,
-            'product_name': product.name,
-            'quantity':     default_qty,
-            'unit_price':   default_price,
-            'total':        default_qty * default_price,
-            'stock':        product.stock_quantity,
-        })
+        self.invoice_items.append(
+            {
+                "product_id": product.id,
+                "product_code": product.numeric_code,
+                "product_name": product.name,
+                "quantity": default_qty,
+                "unit_price": default_price,
+                "total": default_qty * default_price,
+                "stock": product.stock_quantity,
+            }
+        )
         self.product_search_edit.clear()
         self._rebuild_table()
 
@@ -455,20 +471,28 @@ class PurchaseInvoiceWidget(QWidget):
             row = self.items_table.rowCount()
             self.items_table.insertRow(row)
 
-            self.items_table.setItem(row, self.COL_CODE,
-                QTableWidgetItem(self._to_persian(item['product_code'])))
+            self.items_table.setItem(
+                row,
+                self.COL_CODE,
+                QTableWidgetItem(self._to_persian(item["product_code"])),
+            )
 
-            self.items_table.setItem(row, self.COL_NAME,
-                QTableWidgetItem(item['product_name']))
+            self.items_table.setItem(
+                row, self.COL_NAME, QTableWidgetItem(item["product_name"])
+            )
 
-            qty_edit = QLineEdit(self._to_persian(item['quantity']))
+            qty_edit = QLineEdit(self._to_persian(item["quantity"]))
             qty_edit.setAlignment(Qt.AlignCenter)
-            qty_edit.textChanged.connect(lambda text, i=idx: self._on_qty_changed(i, text))
+            qty_edit.textChanged.connect(
+                lambda text, i=idx: self._on_qty_changed(i, text)
+            )
             self.items_table.setCellWidget(row, self.COL_QTY, qty_edit)
 
             price_edit = QLineEdit(self._to_persian(f"{item['unit_price']:,.0f}"))
             price_edit.setAlignment(Qt.AlignCenter)
-            price_edit.textChanged.connect(lambda text, i=idx: self._on_price_changed(i, text))
+            price_edit.textChanged.connect(
+                lambda text, i=idx: self._on_price_changed(i, text)
+            )
             self.items_table.setCellWidget(row, self.COL_PRICE, price_edit)
 
             total_item = QTableWidgetItem(self._to_persian(f"{item['total']:,.0f}"))
@@ -485,13 +509,13 @@ class PurchaseInvoiceWidget(QWidget):
     def _on_qty_changed(self, idx: int, text: str):
         try:
             qty = int(self._to_english(text).replace(",", "").strip())
-            if qty <= 0:
+            if qty < 0:
                 return
         except ValueError:
             return
 
-        self.invoice_items[idx]['quantity'] = qty
-        self.invoice_items[idx]['total'] = qty * self.invoice_items[idx]['unit_price']
+        self.invoice_items[idx]["quantity"] = qty
+        self.invoice_items[idx]["total"] = qty * self.invoice_items[idx]["unit_price"]
         self._update_row_total(idx)
         self._refresh_totals()
 
@@ -503,13 +527,13 @@ class PurchaseInvoiceWidget(QWidget):
         except ValueError:
             return
 
-        self.invoice_items[idx]['unit_price'] = price
-        self.invoice_items[idx]['total'] = self.invoice_items[idx]['quantity'] * price
+        self.invoice_items[idx]["unit_price"] = price
+        self.invoice_items[idx]["total"] = self.invoice_items[idx]["quantity"] * price
         self._update_row_total(idx)
         self._refresh_totals()
 
     def _update_row_total(self, idx: int):
-        total = self.invoice_items[idx]['total']
+        total = self.invoice_items[idx]["total"]
         item = self.items_table.item(idx, self.COL_TOTAL)
         if item:
             item.setText(self._to_persian(f"{total:,.0f}"))
@@ -519,9 +543,9 @@ class PurchaseInvoiceWidget(QWidget):
         self._rebuild_table()
 
     def _refresh_totals(self, *_):
-        total    = sum(i['total'] for i in self.invoice_items)
+        total = sum(i["total"] for i in self.invoice_items)
         discount = self._clean(self.discount_edit.text())
-        final    = max(0.0, total - discount)
+        final = max(0.0, total - discount)
         self.total_label.setText(self._to_persian(f"{total:,.0f}"))
         self.final_label.setText(self._to_persian(f"{final:,.0f}"))
 
@@ -535,22 +559,28 @@ class PurchaseInvoiceWidget(QWidget):
             QMessageBox.warning(self, "خطا", "فاکتور خالی است")
             return
 
-        zero_items = [i['product_name'] for i in self.invoice_items if i['quantity'] <= 0]
+        zero_items = [
+            i["product_name"] for i in self.invoice_items if i["quantity"] <= 0
+        ]
         if zero_items:
-            QMessageBox.warning(self, "خطا",
-                "تعداد کالاهای زیر صفر یا نامعتبر است:\n" + "\n".join(zero_items))
+            QMessageBox.warning(
+                self,
+                "خطا",
+                "تعداد کالاهای زیر صفر یا نامعتبر است:\n" + "\n".join(zero_items),
+            )
             return
 
         try:
             discount = self._clean(self.discount_edit.text())
-            notes    = self.notes_edit.toPlainText().strip() or None
+            notes = self.notes_edit.toPlainText().strip() or None
             is_editing = self._current_invoice_id is not None
 
             if is_editing:
                 reply = QMessageBox.question(
-                    self, "تأیید ویرایش",
+                    self,
+                    "تأیید ویرایش",
                     "با ویرایش این فاکتور، نسخه قبلی جایگزین می‌شود. ادامه می‌دهید؟",
-                    QMessageBox.Yes | QMessageBox.No
+                    QMessageBox.Yes | QMessageBox.No,
                 )
                 if reply != QMessageBox.Yes:
                     return
@@ -560,19 +590,20 @@ class PurchaseInvoiceWidget(QWidget):
                 supplier_id=self.current_supplier.id,
                 items=self.invoice_items,
                 discount=discount,
-                notes=notes
+                notes=notes,
             )
             self._current_invoice_id = invoice.id
 
             QMessageBox.information(
-                self, "موفق",
+                self,
+                "موفق",
                 f"فاکتور خرید با موفقیت {'ویرایش' if is_editing else 'ثبت'} شد\n\n"
                 f"شماره فاکتور: {self._to_persian(invoice.invoice_number)}\n"
-                f"مبلغ کل: {self._to_persian(f'{invoice.final_total:,.0f}')} تومان"
+                f"مبلغ کل: {self._to_persian(f'{invoice.final_total:,.0f}')} تومان",
             )
 
             main_window = self.window()
-            if hasattr(main_window, 'stock_changed'):
+            if hasattr(main_window, "stock_changed"):
                 main_window.stock_changed.emit()
 
         except ValueError as e:
@@ -586,13 +617,18 @@ class PurchaseInvoiceWidget(QWidget):
             return
         try:
             from models.purchase import PurchaseInvoice
-            invoice = self.session.query(PurchaseInvoice).filter(
-                PurchaseInvoice.id == self._current_invoice_id
-            ).first()
+
+            invoice = (
+                self.session.query(PurchaseInvoice)
+                .filter(PurchaseInvoice.id == self._current_invoice_id)
+                .first()
+            )
             if not invoice:
                 QMessageBox.warning(self, "خطا", "فاکتور یافت نشد")
                 return
-            pdf_path = self.print_service.generate_invoice_pdf(invoice, invoice_type="purchase")
+            pdf_path = self.print_service.generate_invoice_pdf(
+                invoice, invoice_type="purchase"
+            )
             self.print_service.open_pdf(pdf_path)
         except Exception as e:
             QMessageBox.critical(self, "خطا", f"خطا در چاپ: {str(e)}")
@@ -617,9 +653,12 @@ class PurchaseInvoiceWidget(QWidget):
     def load_existing_invoice(self, invoice_id: int):
         try:
             from models.purchase import PurchaseInvoice
-            invoice = self.session.query(PurchaseInvoice).filter(
-                PurchaseInvoice.id == invoice_id
-            ).first()
+
+            invoice = (
+                self.session.query(PurchaseInvoice)
+                .filter(PurchaseInvoice.id == invoice_id)
+                .first()
+            )
             if not invoice:
                 QMessageBox.warning(self, "خطا", "فاکتور خرید مورد نظر یافت نشد")
                 return
@@ -637,23 +676,26 @@ class PurchaseInvoiceWidget(QWidget):
             self.invoice_items = []
             for item in invoice.items:
                 product = item.product
-                self.invoice_items.append({
-                    'product_id':   product.id,
-                    'product_code': product.numeric_code,
-                    'product_name': product.name,
-                    'quantity':     item.quantity,
-                    'unit_price':   item.unit_price,
-                    'total':        item.total_price,
-                    'stock':        product.stock_quantity,
-                })
+                self.invoice_items.append(
+                    {
+                        "product_id": product.id,
+                        "product_code": product.numeric_code,
+                        "product_name": product.name,
+                        "quantity": item.quantity,
+                        "unit_price": item.unit_price,
+                        "total": item.total_price,
+                        "stock": product.stock_quantity,
+                    }
+                )
 
             self._rebuild_table()
             self.discount_edit.setText(str(int(invoice.discount)))
             self.notes_edit.setPlainText(invoice.notes or "")
 
             QMessageBox.information(
-                self, "بارگذاری موفق",
-                f"فاکتور خرید شماره {invoice.invoice_number} بارگذاری شد."
+                self,
+                "بارگذاری موفق",
+                f"فاکتور خرید شماره {invoice.invoice_number} بارگذاری شد.",
             )
         except Exception as e:
             QMessageBox.critical(self, "خطا", f"خطا در بارگذاری: {str(e)}")
